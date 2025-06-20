@@ -29,8 +29,9 @@ users_collection = db['users']
 # Create MySQL database function
 def create_mysql_database(root_user, root_password, database_name):
     try:
+        print("🛠️ Creating MySQL DB:", database_name)
         connection = mysql.connector.connect(
-            host="127.0.0.1",
+            host="127.0.0.1",  # ✅ use IP
             user=root_user,
             password=root_password
         )
@@ -41,6 +42,7 @@ def create_mysql_database(root_user, root_password, database_name):
         connection.close()
         return True, "Database created successfully!"
     except mysql.connector.Error as err:
+        print("❌ DB Creation Error:", err)
         return False, str(err)
 
 # Register route
@@ -130,8 +132,12 @@ def execute_query():
         sql_query = re.sub(r"```(?:sql)?", "", sql_query, flags=re.IGNORECASE).replace("```", "").strip()
         sql_query = re.sub(r'\s+', ' ', sql_query).strip()
 
+        print("📥 NL Query:", query_or_nl)
+        print("🧠 SQL Generated:", sql_query)
+        print("🔗 Connecting to DB:", database_name)
+
         connection = mysql.connector.connect(
-            host="127.0.0.1",
+            host="127.0.0.1",  # ✅ use IP
             user=root_user,
             password=root_password,
             database=database_name
@@ -158,6 +164,7 @@ def execute_query():
         })
 
     except Exception as e:
+        print("❌ SQL Execution Error:", e)
         return jsonify({"success": False, "error": str(e)})
 
 # Get user databases
@@ -190,5 +197,6 @@ def get_user():
     else:
         return jsonify({"error": "User not found"}), 404
 
+# Run the server
 if __name__ == '__main__':
     app.run(debug=True)
