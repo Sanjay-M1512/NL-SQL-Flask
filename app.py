@@ -103,7 +103,7 @@ def login():
         "databases": user["mysql_databases"]
     }), 200
 
-# Execute query route
+# Convert NL to SQL only (no DB execution)
 @app.route('/execute_query', methods=['POST'])
 def execute_query():
     data = request.json
@@ -118,9 +118,6 @@ def execute_query():
     if not user_data:
         return jsonify({"error": "User not found!"}), 404
 
-    root_user = user_data.get("mysql_root_user")
-    root_password = user_data.get("mysql_root_password")
-
     try:
         prompt = (
             f"Convert the following natural language query to a valid SQL query "
@@ -129,43 +126,22 @@ def execute_query():
         response = model.generate_content(prompt)
         sql_query = response.text.strip()
 
+        # Clean the output
         sql_query = re.sub(r"```(?:sql)?", "", sql_query, flags=re.IGNORECASE).replace("```", "").strip()
         sql_query = re.sub(r'\s+', ' ', sql_query).strip()
 
         print("📥 NL Query:", query_or_nl)
         print("🧠 SQL Generated:", sql_query)
-        print("🔗 Connecting to DB:", database_name)
-
-        connection = mysql.connector.connect(
-            host="127.0.0.1",  # ✅ use IP
-            user=root_user,
-            password=root_password,
-            database=database_name
-        )
-        cursor = connection.cursor()
-        cursor.execute(sql_query)
-
-        if sql_query.strip().upper().startswith("SELECT"):
-            result = cursor.fetchall()
-            column_names = [desc[0] for desc in cursor.description]
-            result_data = [dict(zip(column_names, row)) for row in result]
-        else:
-            connection.commit()
-            result_data = {"message": "Query executed successfully"}
-
-        cursor.close()
-        connection.close()
 
         return jsonify({
             "success": True,
             "nl_query": query_or_nl,
-            "sql_query": sql_query,
-            "result": result_data
-        })
+            "sql_query": sql_query
+        }), 200
 
     except Exception as e:
-        print("❌ SQL Execution Error:", e)
-        return jsonify({"success": False, "error": str(e)})
+        print("❌ SQL Generation Error:", e)
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # Get user databases
 @app.route('/get_databases', methods=['GET'])
